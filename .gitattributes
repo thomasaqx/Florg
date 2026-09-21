@@ -1,0 +1,23 @@
+# Normaliza fim de linha no repositório (LF), evitando diffs fantasma
+# entre Windows, WSL e CI. Sem isto, um mesmo arquivo aparece como
+# "modificado" só por ter sido aberto num editor diferente.
+* text=auto eol=lf
+
+# Arquivos binários nunca devem ser normalizados.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.pptx binary
+*.pdf binary
+*.bundle binary
+
+# Scripts que exigem CRLF no Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Scripts que exigem LF mesmo no Windows.
+*.sh text eol=lf
+gradlew text eol=lf
