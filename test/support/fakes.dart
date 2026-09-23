@@ -27,6 +27,9 @@ class FakeAuthRepository implements AuthRepository {
   String get baseUrl => 'http://fake';
 
   @override
+  String get describedBaseUrl => '$baseUrl (dublê de teste)';
+
+  @override
   Future<bool> get isAuthenticated async => signedIn;
 
   @override

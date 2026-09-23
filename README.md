@@ -112,6 +112,20 @@ A mensagem de erro diz em qual endereço a tentativa falhou. Leia a porta:
 - **Outra porta** → `FLORG_API_BASE_URL` está errada. O engano mais comum é
   apontar para a porta em que o *app* é servido (`--web-port`, `8080` no
   `.claude/launch.json`) em vez da porta da *API*. Aí o app chama a si mesmo.
+
+Em debug, a tela de login mostra embaixo para onde o app vai mandar o pedido,
+e **de onde essa URL veio**:
+
+```
+API: http://127.0.0.1:8000 (padrão do app)
+API: http://127.0.0.1:8080 (definida por --dart-define=FLORG_API_BASE_URL na compilação)
+```
+
+A segunda linha é a armadilha: `--dart-define` é lido **na compilação**.
+Trocar a flag e apertar `r` ou `R` (hot reload / hot restart) **não** atualiza
+o valor — o app segue com a URL antiga. Encerre o processo (`q`) e rode de
+novo. Se a linha disser "definida por --dart-define" e você não passou flag
+nenhuma, quem passou foi o atalho da sua IDE.
 - **"E-mail ou senha inválidos"** → chegou no backend. O FLORG não semeia
   usuário nenhum; crie o seu pela tela "Criar conta" ou com
   `POST /auth/register`.

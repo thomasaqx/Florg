@@ -145,9 +145,9 @@ class AuthController extends ChangeNotifier {
       // mais comum, e sem essa dica o erro não diz que a porta está errada.
       final hint = url.contains(':$_apiPort')
           ? ''
-          : ' A API do FLORG responde na porta $_apiPort por padrão — '
-                'confira se $url é mesmo o endereço dela.';
-      return 'Não consegui falar com o servidor em $url. '
+          : ' A API do FLORG responde na porta $_apiPort por padrão.';
+      return 'Não consegui falar com o servidor em '
+          '${_repository.describedBaseUrl}. '
           'Confira se o backend está rodando e se a URL base está certa.$hint';
     }
     if (error is MissingPluginException || error is PlatformException) {

@@ -25,6 +25,9 @@ class AuthRepository {
   /// URL base aponta para outro host.
   String get baseUrl => _apiClient.baseUrl;
 
+  /// A mesma URL, com a origem junto (dart-define, padrão, emulador).
+  String get describedBaseUrl => _apiClient.describedBaseUrl;
+
   Future<bool> get isAuthenticated => TokenStorage.hasToken;
 
   Future<AuthUser> register({

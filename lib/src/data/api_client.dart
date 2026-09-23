@@ -15,10 +15,36 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
+/// De onde saiu a URL base da API.
+///
+/// Saber a URL não basta para diagnosticar: um `--dart-define` esquecido num
+/// atalho da IDE e o padrão do app produzem erros idênticos na tela, e só a
+/// origem separa "eu configurei errado" de "o padrão não serve aqui".
+enum ApiBaseUrlSource {
+  /// Veio de `--dart-define=FLORG_API_BASE_URL=...` em tempo de compilação.
+  dartDefine,
+
+  /// Emulador Android, onde `localhost` é a própria VM.
+  androidEmulator,
+
+  /// O padrão para todo o resto.
+  fallback,
+
+  /// Passada direto no construtor (testes).
+  explicit,
+}
+
 class ApiClient {
-  ApiClient({String? baseUrl}) : baseUrl = baseUrl ?? _defaultBaseUrl();
+  ApiClient({String? baseUrl})
+    : baseUrl = baseUrl ?? _defaultBaseUrl(),
+      baseUrlSource = baseUrl != null
+          ? ApiBaseUrlSource.explicit
+          : _defaultBaseUrlSource();
 
   final String baseUrl;
+
+  /// Como [baseUrl] foi decidida, para a mensagem de erro dizer o que conferir.
+  final ApiBaseUrlSource baseUrlSource;
 
   /// Overrides the discovered URL, for a physical device or a staging server:
   /// `flutter run --dart-define=FLORG_API_BASE_URL=http://192.168.0.10:8000`.
@@ -26,14 +52,36 @@ class ApiClient {
     'FLORG_API_BASE_URL',
   );
 
+  static bool get _isAndroidDevice =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   static String _defaultBaseUrl() {
     if (_configuredBaseUrl.isNotEmpty) return _configuredBaseUrl;
     // The Android emulator runs in its own VM; "localhost" there is the VM,
     // not the host machine.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
-    }
+    if (_isAndroidDevice) return 'http://10.0.2.2:8000';
     return 'http://127.0.0.1:8000';
+  }
+
+  static ApiBaseUrlSource _defaultBaseUrlSource() {
+    if (_configuredBaseUrl.isNotEmpty) return ApiBaseUrlSource.dartDefine;
+    if (_isAndroidDevice) return ApiBaseUrlSource.androidEmulator;
+    return ApiBaseUrlSource.fallback;
+  }
+
+  /// A URL base e de onde ela veio, em uma linha, para log e tela de erro.
+  ///
+  /// `--dart-define` é lido na compilação: trocar a flag e dar hot restart
+  /// mantém o valor antigo. É por isso que a origem aparece aqui.
+  String get describedBaseUrl {
+    final origin = switch (baseUrlSource) {
+      ApiBaseUrlSource.dartDefine =>
+        'definida por --dart-define=FLORG_API_BASE_URL na compilação',
+      ApiBaseUrlSource.androidEmulator => 'padrão do emulador Android',
+      ApiBaseUrlSource.fallback => 'padrão do app',
+      ApiBaseUrlSource.explicit => 'passada no construtor',
+    };
+    return '$baseUrl ($origin)';
   }
 
   Future<Map<String, String>> _headers({bool withAuth = true}) async {

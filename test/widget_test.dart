@@ -244,6 +244,16 @@ void main() {
     expect(find.textContaining('porta 8000'), findsOneWidget);
   });
 
+  testWidgets('em debug, a tela de login mostra para onde o app aponta', (
+    tester,
+  ) async {
+    // Sem isso, descobrir que --dart-define ficou com a URL antiga é chute:
+    // a URL base é resolvida na compilação e hot restart não a atualiza.
+    await pumpApp(tester, signedIn: false);
+
+    expect(find.textContaining('API: http://fake'), findsOneWidget);
+  });
+
   testWidgets('cofre do sistema indisponível também vira mensagem', (
     tester,
   ) async {

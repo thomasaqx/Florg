@@ -1,10 +1,12 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 
 import '../core/theme.dart';
 import '../data/auth_controller.dart';
+import '../data/auth_repository.dart';
 import '../shared/layout.dart';
 import '../shared/side_navigation.dart';
 class LoginScreen extends StatefulWidget {
@@ -265,6 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+              if (kDebugMode) const _ApiTargetHint(),
             ],
           ),
         ),
@@ -362,6 +365,31 @@ class _ThemeIconButton extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: AppColors.subtleFill(context),
         foregroundColor: AppColors.accentText(context),
+      ),
+    );
+  }
+}
+
+
+/// Mostra, só em debug, para onde o app vai mandar o login.
+///
+/// A URL base é resolvida na compilação, então "trocar a flag e dar hot
+/// restart" mantém o valor antigo. Ver o endereço na tela transforma isso
+/// num diagnóstico de cinco segundos em vez de um chute.
+class _ApiTargetHint extends StatelessWidget {
+  const _ApiTargetHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final api = context.read<AuthRepository>().describedBaseUrl;
+    return Padding(
+      padding: const EdgeInsets.only(top: FlorgSpacing.md),
+      child: Text(
+        'API: $api',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.colors.textMuted),
       ),
     );
   }
