@@ -103,6 +103,27 @@ para outro host:
 flutter run --dart-define=FLORG_API_BASE_URL=http://192.168.0.10:8000
 ```
 
+### Quando o login não passa
+
+A mensagem de erro diz em qual endereço a tentativa falhou. Leia a porta:
+
+- **`8000`** e mesmo assim falhou → o backend não está no ar. Confira com
+  `curl http://127.0.0.1:8000/health`, que deve responder `{"status":"ok"}`.
+- **Outra porta** → `FLORG_API_BASE_URL` está errada. O engano mais comum é
+  apontar para a porta em que o *app* é servido (`--web-port`, `8080` no
+  `.claude/launch.json`) em vez da porta da *API*. Aí o app chama a si mesmo.
+- **"E-mail ou senha inválidos"** → chegou no backend. O FLORG não semeia
+  usuário nenhum; crie o seu pela tela "Criar conta" ou com
+  `POST /auth/register`.
+
+Celular físico ou outra máquina: `127.0.0.1` é o próprio dispositivo e nunca
+vai achar o seu backend. Use o IP da máquina onde a API roda, e suba-a em
+todas as interfaces:
+
+```bash
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
 ## Importando extrato do banco
 
 O caminho principal para pôr dados no app na Fase 1. A tela **Importar** aceita

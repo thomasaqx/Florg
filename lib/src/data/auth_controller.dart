@@ -12,6 +12,9 @@ import 'auth_repository.dart';
 /// the dashboard for users who were already signed in.
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
+/// Porta padrão da API (ver backend/docker-compose.yml e o README).
+const _apiPort = 8000;
+
 class AuthController extends ChangeNotifier {
   AuthController({required AuthRepository repository})
     : _repository = repository;
@@ -137,8 +140,15 @@ class AuthController extends ChangeNotifier {
         detail.contains('XMLHttpRequest') ||
         detail.contains('Connection refused') ||
         detail.contains('Failed host lookup')) {
-      return 'Não consegui falar com o servidor em ${_repository.baseUrl}. '
-          'Confira se o backend está rodando e se a URL base está certa.';
+      final url = _repository.baseUrl;
+      // Apontar o app para a porta em que ele mesmo é servido é o engano
+      // mais comum, e sem essa dica o erro não diz que a porta está errada.
+      final hint = url.contains(':$_apiPort')
+          ? ''
+          : ' A API do FLORG responde na porta $_apiPort por padrão — '
+                'confira se $url é mesmo o endereço dela.';
+      return 'Não consegui falar com o servidor em $url. '
+          'Confira se o backend está rodando e se a URL base está certa.$hint';
     }
     if (error is MissingPluginException || error is PlatformException) {
       return 'Não consegui guardar sua sessão no cofre do sistema. '

@@ -240,6 +240,8 @@ void main() {
       find.textContaining('Não consegui falar com o servidor'),
       findsOneWidget,
     );
+    // A URL do dublê não é a porta da API, então o erro precisa dizer qual é.
+    expect(find.textContaining('porta 8000'), findsOneWidget);
   });
 
   testWidgets('cofre do sistema indisponível também vira mensagem', (

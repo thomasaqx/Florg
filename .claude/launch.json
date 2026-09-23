@@ -1,4 +1,13 @@
 {
+  "_comment": [
+    "Duas portas diferentes, e confundi-las quebra o login:",
+    "  port / --web-port 8080  = onde o Flutter SERVE o app no navegador.",
+    "  FLORG_API_BASE_URL 8000 = onde a API do FLORG responde (ver README).",
+    "Apontar FLORG_API_BASE_URL para 8080 faz o app chamar a si mesmo,",
+    "e o login falha com 'nao consegui falar com o servidor'.",
+    "Backend noutra maquina: troque 127.0.0.1 pelo IP dela e suba a API",
+    "com --host 0.0.0.0."
+  ],
   "version": "0.0.1",
   "configurations": [
     {
