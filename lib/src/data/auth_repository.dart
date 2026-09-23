@@ -20,6 +20,11 @@ class AuthRepository {
 
   final ApiClient _apiClient;
 
+  /// Para a mensagem de erro dizer em qual endereço a tentativa falhou.
+  /// Sem isso, "não consegui falar com o servidor" não ajuda a descobrir que a
+  /// URL base aponta para outro host.
+  String get baseUrl => _apiClient.baseUrl;
+
   Future<bool> get isAuthenticated => TokenStorage.hasToken;
 
   Future<AuthUser> register({

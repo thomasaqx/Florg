@@ -20,6 +20,12 @@ class FakeAuthRepository implements AuthRepository {
   bool signedIn;
   String? lastEmail;
 
+  /// Falha a injetar no login, para testar o caminho de erro não-API.
+  Object? loginFailure;
+
+  @override
+  String get baseUrl => 'http://fake';
+
   @override
   Future<bool> get isAuthenticated async => signedIn;
 
@@ -29,6 +35,7 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> login({required String email, required String password}) async {
+    if (loginFailure != null) throw loginFailure!;
     lastEmail = email;
     signedIn = true;
   }

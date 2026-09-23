@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MissingPluginException, PlatformException;
+import 'package:http/http.dart' as http;
 
 import 'api_client.dart';
 import 'auth_repository.dart';
@@ -26,16 +28,22 @@ class AuthController extends ChangeNotifier {
   /// Checks on startup whether the stored token is still accepted by the API.
   /// An expired or revoked token must fall back to the login screen.
   Future<void> restoreSession() async {
-    if (!await _repository.isAuthenticated) {
-      _set(status: AuthStatus.unauthenticated);
-      return;
-    }
     try {
+      if (!await _repository.isAuthenticated) {
+        _set(status: AuthStatus.unauthenticated);
+        return;
+      }
       user = await _repository.currentUser();
       _set(status: AuthStatus.authenticated);
-    } on ApiException {
-      // Invalid token or API unreachable: discard it and ask for login again.
-      await _repository.signOut();
+    } catch (_) {
+      // Token inválido, API fora do ar ou cofre do sistema indisponível: em
+      // todos os casos a saída é a mesma, pedir login de novo. Um `catch` só
+      // de ApiException deixava a tela de sessão carregando para sempre.
+      try {
+        await _repository.signOut();
+      } catch (_) {
+        // Se nem limpar o token dá, seguir para o login mesmo assim.
+      }
       _set(status: AuthStatus.unauthenticated);
     }
   }
@@ -73,6 +81,9 @@ class AuthController extends ChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
       return false;
+    } catch (error) {
+      errorMessage = _describe(error);
+      return false;
     } finally {
       isSubmitting = false;
       notifyListeners();
@@ -86,6 +97,12 @@ class AuthController extends ChangeNotifier {
     _set(status: AuthStatus.unauthenticated);
   }
 
+  /// Roda [action] e devolve se deu certo, sem nunca deixar a exceção escapar.
+  ///
+  /// O `catch` aqui era só de ApiException. Qualquer outra falha — backend fora
+  /// do ar, URL base errada, cofre do sistema recusando gravar o token — subia
+  /// pela tela de login, que esperava um `false` e nunca chegava a mostrar o
+  /// erro: o botão parava de girar e nada mais acontecia.
   Future<bool> _submit(Future<void> Function() action) async {
     isSubmitting = true;
     errorMessage = null;
@@ -98,10 +115,37 @@ class AuthController extends ChangeNotifier {
       errorMessage = error.message;
       status = AuthStatus.unauthenticated;
       return false;
+    } catch (error) {
+      errorMessage = _describe(error);
+      status = AuthStatus.unauthenticated;
+      return false;
     } finally {
       isSubmitting = false;
       notifyListeners();
     }
+  }
+
+  /// Traduz uma falha que não veio da API numa frase que diz o que conferir.
+  ///
+  /// Reconhece SocketException pelo texto em vez de importar `dart:io`: esse
+  /// import não compila em Flutter web, que é justamente onde o erro de
+  /// conexão aparece como XMLHttpRequest.
+  String _describe(Object error) {
+    final detail = error.toString();
+    if (error is http.ClientException ||
+        detail.contains('SocketException') ||
+        detail.contains('XMLHttpRequest') ||
+        detail.contains('Connection refused') ||
+        detail.contains('Failed host lookup')) {
+      return 'Não consegui falar com o servidor em ${_repository.baseUrl}. '
+          'Confira se o backend está rodando e se a URL base está certa.';
+    }
+    if (error is MissingPluginException || error is PlatformException) {
+      return 'Não consegui guardar sua sessão no cofre do sistema. '
+          'No Linux isso costuma ser libsecret faltando; no desktop, um '
+          '"flutter clean" seguido de recompilar resolve.';
+    }
+    return 'Falha inesperada ao entrar: $detail';
   }
 
   void _set({required AuthStatus status}) {

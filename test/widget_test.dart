@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:florg/main.dart';
@@ -204,4 +206,95 @@ void main() {
     expect(auth.savedProfile, isNull);
     expect(find.text('Informe seu nome.'), findsOneWidget);
   });
+
+  testWidgets('backend fora do ar mostra erro em vez de não fazer nada', (
+    tester,
+  ) async {
+    // Regressão: AuthController._submit só capturava ApiException. Qualquer
+    // outra falha escapava pela tela de login, o `if (!ok)` nunca rodava e o
+    // usuário clicava em "Entrar" sem ver nada acontecer.
+    final auth = FakeAuthRepository(signedIn: false)
+      ..loginFailure = http.ClientException('Connection refused');
+    await tester.pumpWidget(
+      FlorgBootstrap(
+        authRepository: auth,
+        financialRepository: FakeFinancialRepository(),
+        importRepository: FakeImportRepository(),
+        floraRepository: FakeFloraRepository(),
+        goalsRepository: FakeGoalsRepository(),
+        budgetRepository: FakeBudgetRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'ana@florg.com',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'senha-forte');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.textContaining('Não consegui falar com o servidor'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('cofre do sistema indisponível também vira mensagem', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository(signedIn: false)
+      ..loginFailure = MissingPluginException('flutter_secure_storage');
+    await tester.pumpWidget(
+      FlorgBootstrap(
+        authRepository: auth,
+        financialRepository: FakeFinancialRepository(),
+        importRepository: FakeImportRepository(),
+        floraRepository: FakeFloraRepository(),
+        goalsRepository: FakeGoalsRepository(),
+        budgetRepository: FakeBudgetRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).first, 'ana@florg.com');
+    await tester.enterText(find.byType(TextFormField).at(1), 'senha-forte');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('cofre do sistema'), findsOneWidget);
+  });
+
+  testWidgets('sessão guardada que falha cai no login, não trava carregando', (
+    tester,
+  ) async {
+    // restoreSession também só capturava ApiException: uma falha do cofre
+    // deixava a tela de sessão girando para sempre.
+    final auth = _BrokenStorageAuthRepository();
+    await tester.pumpWidget(
+      FlorgBootstrap(
+        authRepository: auth,
+        financialRepository: FakeFinancialRepository(),
+        importRepository: FakeImportRepository(),
+        floraRepository: FakeFloraRepository(),
+        goalsRepository: FakeGoalsRepository(),
+        budgetRepository: FakeBudgetRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Entrar no FLORG'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+}
+
+/// Cofre do sistema que recusa qualquer leitura, como acontece no Linux sem
+/// libsecret.
+class _BrokenStorageAuthRepository extends FakeAuthRepository {
+  @override
+  Future<bool> get isAuthenticated async =>
+      throw MissingPluginException('flutter_secure_storage');
 }
